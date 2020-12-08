@@ -13,7 +13,7 @@ from collections import Counter
 
 from pydub.utils import get_array_type
 from Levenshtein import distance
-count = 0
+count = [0]
 NOTES = {
     "A": 440,
     "A#": 466.1637615180899,
@@ -28,7 +28,21 @@ NOTES = {
     "G": 783.9908719634985,
     "G#": 830.6093951598903,
 }
-
+Color_Notes = {
+    "A": "red",
+    "A#": "coral",
+    "B": "brown",
+    "C": "darkorange",
+    "C#": "orange",
+    "D": "lawngreen",
+    "D#": "gold",
+    "E": "slategray",
+    "F": "darkgreen",
+    "F#": "lime",
+    "G": "navy",
+    "G#": "skyblue",
+    "U": "black"
+}
 
 def frequency_spectrum(sample, max_frequency=800):
     """
@@ -174,7 +188,9 @@ def main(file, note_file=None, note_starts_file=None, plot_starts=False, plot_ff
         print(actual_notes)
     print("Predicted Notes")
     print(predicted_notes)
-
+    global x_axis, volume, count
+    count[0] = "Main"
+    graph_plotter(x_axis, volume, "dBFS vs Time", "Time(in seconds)", "dBFS(Decibels relative to full scale)", predicted_notes, actual_starts, starts)
     if actual_notes:
         lev_distance = calculate_distance(predicted_notes, actual_notes)
         print("Levenshtein distance: {}/{}".format(lev_distance, len(actual_notes)))
@@ -202,6 +218,7 @@ def predict_note_starts(song, plot, actual_starts):
     # Filter out lower frequencies to reduce noise
     song = song.high_pass_filter(80, order=4)
     # dBFS is decibels relative to the maximum possible loudness
+    global volume
     volume = [segment.dBFS for segment in song[::SEGMENT_MS]]
 
     predicted_starts = []
@@ -220,8 +237,8 @@ def predict_note_starts(song, plot, actual_starts):
         print(" ".join(["{:5.2f}".format(ms / 1000) for ms in predicted_starts]))
 
     # Plot the volume over time (sec)
+    global x_axis
     x_axis = np.arange(len(volume)) * (SEGMENT_MS / 1000)
-    graph_plotter(x_axis, volume, "dBFS vs Time", "Time(in seconds)", "dBFS(Decibels relative to full scale)")
     if plot:
         x_axis = np.arange(len(volume)) * (SEGMENT_MS / 1000)
         plt.plot(x_axis, volume)
@@ -236,21 +253,35 @@ def predict_note_starts(song, plot, actual_starts):
 
     return predicted_starts
 
-def graph_plotter(x_axis, y_axis, title, xlabel, ylabel, text=-0.8, pos=-1):
+def graph_plotter(x_axis, y_axis, title, xlabel, ylabel, list_notes=[], actual_starts=[], predicted_starts =[], text=-0.8, pos=-1):
+    global Color_Notes
     figure = plt.figure(figsize=(20,15))
     axes = figure.add_subplot()
     axes.plot(x_axis, y_axis, linewidth=2.5, color='blue')
+    if len(actual_starts)!= 0 or len(predicted_starts)!= 0:
+        new_pred_starts = [x / 1000 for x in predicted_starts]
+        """for s in actual_starts:
+            plt.axvline(x=s, color="r", linewidth=0.5, linestyle="-", label="Actual")"""
+        labels = list(set(list_notes))
+        j = 0
+        for i, ms in enumerate(new_pred_starts):
+            if j < len(labels):
+                if list_notes[i] == labels[j]:
+                    plt.axvline(ms, color=Color_Notes[list_notes[i]], linewidth=2, linestyle='--',     label=f"Note {labels[j]}")
+                    j+=1
+            else:
+                plt.axvline(ms, color=Color_Notes[list_notes[i]], linewidth=2, linestyle='--')
     axes.tick_params(which='minor', length=3, color='black')
     axes.tick_params(which='major', length=5) 
     axes.tick_params(which='both', width=2) 
     axes.tick_params(labelcolor='black', labelsize=15, width=3.5)
+    if len(list_notes) != 0:
+        axes.legend(prop={'size': 18})
     plt.ylabel(ylabel, {'fontsize': 21, 'color': 'y'})
     plt.xlabel(xlabel,  {'fontsize': 21, 'color': 'y'})
-    plt.grid()
     global count
     plt.title(title, {'color': 'y', 'fontsize': 45})
-    plt.savefig(f'graph{count}.png')
-    count += 1 
+    plt.savefig(f'Graph {count[0]}.png')
     
 def predict_notes(song, starts, actual_notes, plot_fft_indices):
     predicted_notes = []
@@ -276,7 +307,6 @@ def predict_notes(song, starts, actual_notes, plot_fft_indices):
         length = sample_to - sample_from
         print("Sampled from {} to {} ({} ms)".format(sample_from, sample_to, length))
         print("Frequency sample period: {}hz".format(freqs[1]))
-
         # Print peak info
         peak_indicies, props = scipy.signal.find_peaks(freq_magnitudes, height=0.015)
         print("Peaks of more than 1.5 percent of total frequency contribution:")
@@ -284,9 +314,11 @@ def predict_notes(song, starts, actual_notes, plot_fft_indices):
             freq = freqs[peak]
             magnitude = props["peak_heights"][j]
             print("{:.1f}hz with magnitude {:.3f}".format(freq, magnitude))
-        plot_fft_indices = [0, 4, 5, 19]
+        plot_fft_indices = [0, 2, 4]
+        global count
         if i in plot_fft_indices:
             graph_plotter(freqs, freq_magnitudes, "Magnitude of the frequency response", "Frequency(in Hertz)", "|X(omega)|")
+            count[0] += 1
     return predicted_notes
 from tkinter import filedialog
 from tkinter import *
