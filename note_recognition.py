@@ -260,15 +260,18 @@ def graph_plotter(x_axis, y_axis, title, xlabel, ylabel, list_notes=[], actual_s
     axes.plot(x_axis, y_axis, linewidth=2.5, color='blue')
     if len(actual_starts)!= 0 or len(predicted_starts)!= 0:
         new_pred_starts = [x / 1000 for x in predicted_starts]
-        """for s in actual_starts:
-            plt.axvline(x=s, color="r", linewidth=0.5, linestyle="-", label="Actual")"""
         labels = list(set(list_notes))
         j = 0
         for i, ms in enumerate(new_pred_starts):
             if j < len(labels):
-                if list_notes[i] == labels[j]:
-                    plt.axvline(ms, color=Color_Notes[list_notes[i]], linewidth=2, linestyle='--',     label=f"Note {labels[j]}")
-                    j+=1
+                for i in range(len(list_notes)):
+                    if j < len(labels):
+                        if list_notes[i] == labels[j]:
+                            plt.axvline(ms, color=Color_Notes[list_notes[i]], linewidth=2, linestyle='--',     label=f"Note {labels[j]}")
+                            del labels[j]
+                            continue
+                else:
+                    plt.axvline(ms, color=Color_Notes[list_notes[i]], linewidth=2, linestyle='--')
             else:
                 plt.axvline(ms, color=Color_Notes[list_notes[i]], linewidth=2, linestyle='--')
     axes.tick_params(which='minor', length=3, color='black')
