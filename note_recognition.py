@@ -14,6 +14,8 @@ from collections import Counter
 from pydub.utils import get_array_type
 from Levenshtein import distance
 count = [0]
+simp = open("Simple.txt", "w")
+det = open("Note.txt","w")
 NOTES = {
     "A": 440,
     "A#": 466.1637615180899,
@@ -79,7 +81,9 @@ def classify_note_attempt_1(freq_array, freq_magnitude):
     i = np.argmax(freq_magnitude)
     f = freq_array[i]
     print("frequency {}".format(f))
+    det.write("frequency {}\n".format(f))
     print("magnitude {}".format(freq_magnitude[i]))
+    det.write("magnitude {}\n".format(freq_magnitude[i]))
     return get_note_for_freq(f)
 
 
@@ -183,19 +187,25 @@ def main(file, note_file=None, note_starts_file=None, plot_starts=False, plot_ff
     predicted_notes = predict_notes(song, starts, actual_notes, plot_fft_indices)
 
     print("")
+    det.write("\n")
     if actual_notes:
         print("Actual Notes")
         print(actual_notes)
     print("Predicted Notes")
+    det.write("Predicted Notes\n")
+    simp.write("Predicted Notes\n")
     print(predicted_notes)
+    det.write(f"{predicted_notes}\n")
+    simp.write(f"{predicted_notes}\n")
     global x_axis, volume, count
     count[0] = "Main"
     graph_plotter(x_axis, volume, "dBFS vs Time", "Time(in seconds)", "dBFS(Decibels relative to full scale)", predicted_notes, actual_starts, starts)
     if actual_notes:
         lev_distance = calculate_distance(predicted_notes, actual_notes)
         print("Levenshtein distance: {}/{}".format(lev_distance, len(actual_notes)))
-
-
+        det.write("Levenshtein distance: {}/{}\n".format(lev_distance, len(actual_notes)))
+    det.close()
+    simp.close()
 # Very simple implementation, just requires a minimum volume and looks for left edges by
 # comparing with the prior sample, also requires a minimum distance between starts
 # Future improvements could include smoothing and/or comparing multiple samples
@@ -232,9 +242,13 @@ def predict_note_starts(song, plot, actual_starts):
     # If actual note start times are provided print a comparison
     if len(actual_starts) > 0:
         print("Approximate actual note start times ({})".format(len(actual_starts)))
+        det.write("Approximate actual note start times ({})\n".format(len(actual_starts)))
         print(" ".join(["{:5.2f}".format(s) for s in actual_starts]))
+        det.write(" ".join(["{:5.2f}\n".format(s) for s in actual_starts]))
         print("Predicted note start times ({})".format(len(predicted_starts)))
+        det.write("Predicted note start times ({})\n".format(len(predicted_starts)))
         print(" ".join(["{:5.2f}".format(ms / 1000) for ms in predicted_starts]))
+        det.write(" ".join(["{:5.2f}\n".format(ms / 1000) for ms in predicted_starts]))
 
     # Plot the volume over time (sec)
     global x_axis
@@ -301,23 +315,32 @@ def predict_notes(song, starts, actual_notes, plot_fft_indices):
 
         # Print general info
         print("")
+        det.write("\n")
         print("Note: {}".format(i))
+        det.write("Note: {}\n".format(i))
         if i < len(actual_notes):
             print("Predicted: {} Actual: {}".format(predicted, actual_notes[i]))
+            det.write("Predicted: {} Actual: {}\n".format(predicted, actual_notes[i]))
         else:
             print("Predicted: {}".format(predicted))
+            det.write("Predicted: {}\n".format(predicted))
         print("Predicted start: {}".format(start))
+        det.write("Predicted start: {}\n".format(start))
         length = sample_to - sample_from
         print("Sampled from {} to {} ({} ms)".format(sample_from, sample_to, length))
+        det.write("Sampled from {} to {} ({} ms)\n".format(sample_from, sample_to, length))
         print("Frequency sample period: {}hz".format(freqs[1]))
+        det.write("Frequency sample period: {}hz\n".format(freqs[1]))
         # Print peak info
         peak_indicies, props = scipy.signal.find_peaks(freq_magnitudes, height=0.015)
         print("Peaks of more than 1.5 percent of total frequency contribution:")
+        det.write("Peaks of more than 1.5 percent of total frequency contribution:\n")
         for j, peak in enumerate(peak_indicies):
             freq = freqs[peak]
             magnitude = props["peak_heights"][j]
             print("{:.1f}hz with magnitude {:.3f}".format(freq, magnitude))
-        plot_fft_indices = [0, 2, 4]
+            det.write("{:.1f}hz with magnitude {:.3f}\n".format(freq, magnitude))
+        plot_fft_indices = [4]
         global count
         if i in plot_fft_indices:
             graph_plotter(freqs, freq_magnitudes, "Magnitude of the frequency response", "Frequency(in Hertz)", "|X(omega)|")
